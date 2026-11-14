@@ -1,3 +1,4 @@
+glmCreateTestGTC(perf_batch_transform)
 glmCreateTestGTC(perf_matrix_div)
 glmCreateTestGTC(perf_matrix_inverse)
 glmCreateTestGTC(perf_matrix_mul)
