@@ -1810,6 +1810,7 @@ export namespace glm {
 		using glm::mat3_cast;
 		using glm::mat4_cast;
 		using glm::matrixCompMult;
+		using glm::matrixCondition;
 		using glm::max;
 		using glm::min;
 		using glm::mirrorClamp;
@@ -1897,6 +1898,7 @@ export namespace glm {
 		using glm::project;
 		using glm::projectNO;
 		using glm::projectZO;
+		using glm::pseudoinverse;
 		using glm::quarter_pi;
 		using glm::quatLookAt;
 		using glm::quatLookAtLH;
@@ -1928,9 +1930,11 @@ export namespace glm {
 		using glm::sin;
 		using glm::sinh;
 		using glm::slerp;
+		using glm::singularValues;
 		using glm::smoothstep;
 		using glm::sphericalRand;
 		using glm::sqrt;
+		using glm::stableInverse;
 		using glm::step;
 		using glm::tan;
 		using glm::tanh;

@@ -44,7 +44,48 @@ namespace glm
 
 		qua<T, Q> z = y;
 
-		T cosTheta = dot(x, y);
+		// Clamp the dot product into [-1, 1] so that rounding on non-unit or
+		// boundary inputs can never push the trigonometric functions out of domain.
+		T cosTheta = clamp(dot(x, y), static_cast<T>(-1), static_cast<T>(1));
+
+		// If cosTheta < 0, the interpolation will take the long way around the sphere.
+		// To fix this, one quat must be negated.
+		if(cosTheta < static_cast<T>(0))
+		{
+			z = -y;
+			cosTheta = -cosTheta;
+		}
+
+		T const sinTheta = sqrt(max(static_cast<T>(0),
+			static_cast<T>(1) - cosTheta * cosTheta));
+
+		// Only the genuinely degenerate configurations (exact coincidence or the
+		// exact antipode, where the great arc is not unique) fall back to a
+		// normalized linear blend. Every other angle uses the exact great-circle
+		// formula, and atan2 stays well conditioned as cosTheta approaches +/-1,
+		// so the interpolation coefficient never flips sign mid-arc.
+		if(sinTheta < epsilon<T>() * epsilon<T>())
+		{
+			return normalize(
+				x * (static_cast<T>(1) - a) + z * a);
+		}
+		else
+		{
+			// Essential Mathematics, page 467
+			T const angle = atan2(sinTheta, cosTheta);
+			return (sin((static_cast<T>(1) - a) * angle) * x + sin(a * angle) * z) / sin(angle);
+		}
+	}
+
+	template<typename T, typename S, qualifier Q>
+	GLM_FUNC_QUALIFIER qua<T, Q> slerp(qua<T, Q> const& x, qua<T, Q> const& y, T a, S k)
+	{
+		static_assert(std::numeric_limits<T>::is_iec559 || GLM_CONFIG_UNRESTRICTED_FLOAT, "'slerp' only accept floating-point inputs");
+		static_assert(std::numeric_limits<S>::is_integer, "'slerp' only accept integer for spin count");
+
+		qua<T, Q> z = y;
+
+		T cosTheta = clamp(dot(x, y), static_cast<T>(-1), static_cast<T>(1));
 
 		// If cosTheta < 0, the interpolation will take the long way around the sphere.
 		// To fix this, one quat must be negated.
@@ -66,48 +107,14 @@ namespace glm
 		}
 		else
 		{
-			// Essential Mathematics, page 467
-			T angle = acos(cosTheta);
-			return (sin((static_cast<T>(1) - a) * angle) * x + sin(a * angle) * z) / sin(angle);
+			// Graphics Gems III, page 96
+			T const sinTheta = sqrt(max(static_cast<T>(0),
+				static_cast<T>(1) - cosTheta * cosTheta));
+			T const angle = atan2(sinTheta, cosTheta);
+			T phi = angle + static_cast<T>(k) * glm::pi<T>();
+			return (sin(angle - a * phi)* x + sin(a * phi) * z) / sin(angle);
 		}
 	}
-
-    template<typename T, typename S, qualifier Q>
-    GLM_FUNC_QUALIFIER qua<T, Q> slerp(qua<T, Q> const& x, qua<T, Q> const& y, T a, S k)
-    {
-        static_assert(std::numeric_limits<T>::is_iec559 || GLM_CONFIG_UNRESTRICTED_FLOAT, "'slerp' only accept floating-point inputs");
-        static_assert(std::numeric_limits<S>::is_integer, "'slerp' only accept integer for spin count");
-
-        qua<T, Q> z = y;
-
-        T cosTheta = dot(x, y);
-
-        // If cosTheta < 0, the interpolation will take the long way around the sphere.
-        // To fix this, one quat must be negated.
-        if (cosTheta < static_cast<T>(0))
-        {
-            z = -y;
-            cosTheta = -cosTheta;
-        }
-
-        // Perform a linear interpolation when cosTheta is close to 1 to avoid side effect of sin(angle) becoming a zero denominator
-        if (cosTheta > static_cast<T>(1) - epsilon<T>())
-        {
-            // Linear interpolation
-            return qua<T, Q>::wxyz(
-                mix(x.w, z.w, a),
-                mix(x.x, z.x, a),
-                mix(x.y, z.y, a),
-                mix(x.z, z.z, a));
-        }
-        else
-        {
-            // Graphics Gems III, page 96
-            T angle = acos(cosTheta);
-            T phi = angle + static_cast<T>(k) * glm::pi<T>();
-            return (sin(angle - a * phi)* x + sin(a * phi) * z) / sin(angle);
-        }
-    }
 
 	template<typename T, qualifier Q>
 	GLM_FUNC_QUALIFIER GLM_CONSTEXPR qua<T, Q> conjugate(qua<T, Q> const& q)
@@ -141,4 +148,3 @@ namespace glm
 #if GLM_CONFIG_SIMD == GLM_ENABLE
 #	include "quaternion_common_simd.inl"
 #endif
-
